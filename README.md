@@ -10,7 +10,7 @@ Test Runner / BDD: Behave (Gherkin)
 Browser Automation: Selenium WebDriver 4.x
 Driver Management: webdriver-manager
 Design Pattern: Page Object Model (POM)
-Reporting: XML (JUnit-style) generated per feature
+Reporting: Allure-Report
 Config Management: python-dotenv / config
 
 #project structure
