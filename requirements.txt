@@ -1,0 +1,19 @@
+# ── Core Selenium / BDD stack ──────────────────────────────────────────────────
+selenium==4.21.0
+behave==1.2.6
+webdriver-manager==4.0.1
+
+# ── Environment & config ───────────────────────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── Reporting ─────────────────────────────────────────────────────────────────
+behave-html-formatter==0.9.9      # HTML report: behave -f behave_html_formatter:HTMLFormatter -o reports/report.html
+allure-behave==2.13.5             # Allure: behave -f allure_behave.formatter:AllureFormatter -o reports/allure-results
+
+# ── Optional: test utilities ───────────────────────────────────────────────────
+Pillow==10.3.0                    # Screenshot image handling (if needed for post-processing)
+requests==2.32.3                  # HTTP status code validation helper
+
+# ── Dev / linting ─────────────────────────────────────────────────────────────
+flake8==7.0.0
+black==24.4.2

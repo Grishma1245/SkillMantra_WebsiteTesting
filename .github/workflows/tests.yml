@@ -1,0 +1,190 @@
+name: SkillMantra Automation Suite
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+  # Manual trigger for on-demand runs
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Behave tag expression (e.g. @smoke, @regression)'
+        required: false
+        default: '@smoke'
+      browser:
+        description: 'Browser to run tests on'
+        required: false
+        default: 'chrome'
+
+env:
+  PYTHON_VERSION: "3.11"
+  HEADLESS: "true"
+  BROWSER: ${{ github.event.inputs.browser || 'chrome' }}
+  BASE_URL: "https://skillmantraedu.com"
+
+jobs:
+  smoke-tests:
+    name: "Smoke Tests — ${{ github.event.inputs.browser || 'chrome' }} (headless)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Python setup ────────────────────────────────────────────────────────
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      # ── Chrome / chromedriver ────────────────────────────────────────────────
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+
+      # ── Python dependencies ──────────────────────────────────────────────────
+      - name: Install Python dependencies
+        working-directory: skillmantra_automation
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── Create report directories ────────────────────────────────────────────
+      - name: Create report directories
+        working-directory: skillmantra_automation
+        run: |
+          mkdir -p reports/allure-results
+          mkdir -p reports/screenshots
+          mkdir -p reports/logs
+
+      # ── Run smoke suite ──────────────────────────────────────────────────────
+      - name: Run @smoke tests (headless)
+        working-directory: skillmantra_automation
+        env:
+          HEADLESS: "true"
+          BROWSER: ${{ env.BROWSER }}
+          BASE_URL: ${{ env.BASE_URL }}
+        run: |
+          TAG="${{ github.event.inputs.tags || '@smoke' }}"
+          echo "Running behave with tag: $TAG"
+          behave \
+            --tags="$TAG" \
+            --format=behave_html_formatter:HTMLFormatter \
+            --outfile=reports/report.html \
+            --format=allure_behave.formatter:AllureFormatter \
+            --outfile=reports/allure-results \
+            --format=pretty \
+            --no-capture \
+            --no-capture-stderr \
+            || true   # Collect results even on failure
+
+      # ── Generate Allure report ───────────────────────────────────────────────
+      - name: Install Allure CLI
+        run: |
+          curl -o allure.tgz -L https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+          tar -zxf allure.tgz
+          sudo mv allure-2.27.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
+
+      - name: Generate Allure HTML report
+        working-directory: skillmantra_automation
+        run: |
+          allure generate reports/allure-results --clean -o reports/allure-report
+        if: always()
+
+      # ── Upload reports as artifacts ──────────────────────────────────────────
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: behave-html-report
+          path: skillmantra_automation/reports/report.html
+          retention-days: 14
+
+      - name: Upload Allure report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-report
+          path: skillmantra_automation/reports/allure-report
+          retention-days: 14
+
+      - name: Upload failure screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: failure-screenshots
+          path: skillmantra_automation/reports/screenshots
+          retention-days: 14
+
+      - name: Upload test logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-logs
+          path: skillmantra_automation/reports/logs
+          retention-days: 14
+
+  # ── Optional full regression job (manual trigger or schedule) ────────────────
+  regression-tests:
+    name: "Full Regression Suite"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.tags == '@regression'
+    needs: smoke-tests
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: skillmantra_automation
+        run: pip install -r requirements.txt
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Create report directories
+        working-directory: skillmantra_automation
+        run: mkdir -p reports/allure-results reports/screenshots reports/logs
+
+      - name: Run full regression suite (headless)
+        working-directory: skillmantra_automation
+        env:
+          HEADLESS: "true"
+          BROWSER: chrome
+          BASE_URL: ${{ env.BASE_URL }}
+        run: |
+          behave \
+            --tags="@regression" \
+            --format=allure_behave.formatter:AllureFormatter \
+            --outfile=reports/allure-results \
+            --format=pretty \
+            || true
+
+      - name: Install Allure & generate report
+        run: |
+          curl -o allure.tgz -L https://github.com/allure-framework/allure2/releases/download/2.27.0/allure-2.27.0.tgz
+          tar -zxf allure.tgz && sudo mv allure-2.27.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/local/bin/allure
+          allure generate skillmantra_automation/reports/allure-results --clean -o skillmantra_automation/reports/allure-report
+
+      - name: Upload regression Allure report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-allure-report
+          path: skillmantra_automation/reports/allure-report
+          retention-days: 30

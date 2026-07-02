@@ -1,0 +1,40 @@
+# Virtual environment folders
+myenv/
+venv/
+.venv/
+
+# Python cache/build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+build/
+dist/
+
+# Environment/secrets files
+.env
+.env.local
+
+# Generated test reports and artifacts
+reports/
+allure-results/
+allure-report/
+*.xml
+screenshots/
+logs/
+*.log
+pretty.output
+
+# WebDriver binaries
+drivers/
+*.exe
+chromedriver*
+geckodriver*
+msedgedriver*
+
+# IDE/editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
