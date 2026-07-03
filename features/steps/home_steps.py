@@ -11,14 +11,6 @@ logger = get_logger(__name__)
 _BASE_URL = get_base_url()
 
 
-# ── Given ──────────────────────────────────────────────────────────────────────
-
-# NOTE: The "I am on the SkillMantra homepage" Given is shared with
-# navigation_steps.py. behave resolves step definitions globally, so the
-# definition in navigation_steps.py covers this feature too. No duplicate needed.
-
-
-# ── When ───────────────────────────────────────────────────────────────────────
 
 @when('I click the "Explore Programs" button')
 def step_click_explore_programs(context: Context) -> None:
