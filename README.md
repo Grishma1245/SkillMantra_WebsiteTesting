@@ -134,4 +134,4 @@ allure open reports/allure-report
 | ![Allure Status](assets/allure_status.png) | ![Allure Suites](assets/allure_suites.png) |
 
 
-*Created for SkillMantra Automation*
+*Created for SkillMantra automation*
